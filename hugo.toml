@@ -62,7 +62,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       
       logo = ""
       
-      name = "cd ~"
+      name = "~/"
       
       pre = ""
       
