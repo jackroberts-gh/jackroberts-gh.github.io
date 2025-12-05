@@ -165,7 +165,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
   [params.social]
     GitHub = "jackroberts-gh"
     Lichess = "pneroberts"
-    Email = "redacted"
+    Email = ""
   
   [params.page]
     
