@@ -261,7 +261,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       Telegram = true 
     
     [params.page.comment]
-      enable = false
+      enable = true
       
       [params.page.comment.disqus]
         
@@ -321,9 +321,9 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
         enable = false
       
       [params.page.comment.utterances]
-        enable = false
+        enable = true
         
-        repo = ""
+        repo = "jackroberts-gh/jackroberts-gh.github.io-comments"
         issueTerm = "pathname"
         label = ""
         lightTheme = "github-light"
