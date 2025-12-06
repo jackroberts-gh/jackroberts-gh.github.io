@@ -158,7 +158,7 @@ ignoreErrors = ["error-remote-getjson", "error-missing-instagram-accesstoken"]
       disclaimer = ""
     
     [params.home.posts]
-      enable = true
+      enable = false
       paginate = 6
       defaultHiddenFromHomePage = true
   
