@@ -20,11 +20,9 @@ toc:
 
 ## Introduction
 
-As a Platform Engineer working exclusively with AWS day-to-day, I've found myself spending less and less time writing code. To remedy this, I decided to learn Go. One of the things I really like about Go is how it does Concurrency. When I initially read about Concurrency in Go (shout out to Jon Bodner's `Learning Go`), everything made perfect sense - goroutines and channels, hand-in-hand, easy.
+As a Platform Engineer working exclusively with AWS day-to-day, I've found myself spending less and less time writing code. To remedy this, I decided to learn Go. One of the things I really like about Go is how it implements Concurrency - in particular, how Goroutines communicate using channels, known as the CSP (Communicating Sequential Processes) model.
 
-However... I found that when I sat down to solve a problem using the language, I'd struggle to remember what sort of Channel I should be using, and which way around the arrow went. I'd find myself searching my brain for some rote memorized piece of code, rather than having a way to logically "work it out".
-
-I'm using the above as an excuse to write this post, to help you more easily figure out whether you need a `chan`, a `<-chan`, or a `chan<-`.
+Having recently stood up this site, writing a small, helpful post on this topic felt like a good way to kick things off. So below is a quick primer on Concurrency in Go - an intro to Goroutines, Channels, and how I remember which side the `<-` goes on!
 
 ## Concurrency in Go
 
@@ -46,11 +44,18 @@ Enter **Channels**.
 
 ## Channels
 
-A channel is a conduit through which you can send and receive values. 
+A channel (`chan`) is a conduit through which you can send and receive values. You send and receive values using the `channel` operator, which is a left-pointing arrow (`<-`).
 
-First off, the basic rule: the `channel` operator is always a left-pointing arrow (`<-`). The only thing that changes is what side of the channel (`chan`) the arrow goes - before, or after.
+First off, the basics: 
 
-Even though above I describe a channel as a conduit, I found that the best way to visualize a channel is as a **pipe**.
+1. There are three types of Channels - bi-directional (`chan`), send-only (`chan<-`), and receive-only (`<-chan`)
+2. You will always want to initially create (`make`) a bi-directional channel by using `chan`.
+3. You use the `channel` operator (`<-`) to make it send-only or receive-only in the context of how you want a function to use it.
+4. The `channel` operator, i.e. the arrow, is always a left-facing arrow (`<-`), whether it's a send-only or a receive-only.
+
+Now you know that, the only remaining question becomes - when do you use `chan`, `chan<-`, or `<-chan`? The answer, as alluded to above, comes down to restricting how you want a function to use that channel. It's like the Principle of Least Privilege, but for Go Concurrency.
+
+> **_NOTE:_**: Even though above I describe a channel as a conduit, I found that the best way to visualize a channel is as a **pipe**.
 
 ```
       this pipe is a channel
@@ -59,40 +64,32 @@ Even though above I describe a channel as a conduit, I found that the best way t
 ---------------------------------
 ```
 
-This way not look all that useful currently, but bear with me.
-
 ### Bi-directional
 
-A channel can be bi-directional, simply by being declared a `chan`. This means that the channel is two way.
+As mentioned above, a channel can be bi-directional, simply by being passed as a `chan`. This means that the channel is two way.
 
 You can send things through it:
 
 ```
-someChannel := make(chan int)
+someBiDirectionalChannel := make(chan int)
 
 go func() {
-        defer close(someChannel)
-        someChannel <- 123 // send 123 to someChannel
+        defer close(someBiDirectionalChannel)
+        someBiDirectionalChannel <- 123 // send 123 to someBiDirectionalChannel
     }()
 ```
-
-> **_NOTE:_**: make(chan int) creates an unbuffered channel. This means the sender will block (pause) until someone is ready to receive the value.
 
 And you can receive from it:
 
 ```
-for r := range someChannel { // receive from the channel
+for r := range someBiDirectionalChannel { // receive from the channel
       // do stuff
 }
 ```
 
-You might be thinking: "Great - why even bother using a `send-only` or `receive-only` channel? I'll just use a bidirectional one!" And the response would be: "Sure, go ahead, if you're happy for any Tom, Dick, and Harry to also send stuff to your channel!". 
-
-It's idiomatic in Go to initially create a channel as a bidirectional one. However, you should only return to the caller the kind of channel you want them to work with. Do you want to give them a channel to only receive something from, or do you want to give them a channel to send stuff to? The answer is rarely both - deadlocks are a much greater risk if you do this.
-
 ### Send-only
 
-Send-only channels are written as `chan<-`. 
+Send-only channels can be passed to a function as `chan<-`. 
 
 Let's visualise this using the "pipe" analogy:
 
@@ -103,9 +100,26 @@ Let's visualise this using the "pipe" analogy:
 ---------------------------------
 ```
 
-The arrow being at the end is the only position where it makes sense that data can be flowing **in to** the pipe.
+The arrow being at the end is the only position where it makes sense that data can be flowing **in to** the pipe. Therefore, `chan<-` is a **send-only** channel.
 
-Therefore, `chan<-` is a **send-only** channel.
+Below is an example where the `produce` function uses a **send-only** channel:
+
+```
+// produce accepts a send-only channel (chan<-)
+func produce(pings chan<- string) {
+	pings <- "hello world"
+	
+	// If you tried to do `msg := <-pings `
+	// The compiler would throw an error: "invalid operation: <-pings (receive from send-only type chan<- string)"
+}
+
+func main() {
+	messages := make(chan string)
+
+	// Go automatically converts the bidirectional channel to send-only for the function
+	go produce(messages)
+}
+```
 
 ### Receive-only
 
@@ -120,6 +134,31 @@ Again, let's visualise this using the "pipe" analogy:
     ---------------------------------
 ```
 
-The arrow being at the end is the only position where it makes sense that data can be flowing **out of** the pipe.
+The arrow being at the end is the only position where it makes sense that data can be flowing **out of** the pipe. It is being **received** by whatever is at the end of the pipeline, and therefore `<-chan` is a **receive-only** channel.
 
-If this isn't doing it for you, you can just remember that it's the opposite/only alternative once you know that **send-only** has the arrow on the right-hand side.
+Below is an example where the `consume` function uses a receive-only channel:
+
+```
+// consume accepts a receive-only channel (chan<-)
+func consume(pings <-chan string) {
+	// We can only read from this channel
+	msg := <-pings
+
+	// If you tried to do `pings <- "some data"`
+	// The compiler would error: "invalid operation: pings <- "some data" (send to receive-only type <-chan string)"
+}
+
+func main() {
+	comms := make(chan string)
+
+      // from the previous example, `produce` sends data to the channel
+	go produce(comms)
+	
+	// Pass the same channel as receive-only
+	consume(comms)
+}
+```
+
+## Conclusion
+
+And that's it - that's your very quick primer to using Goroutines and Channels in Go.
