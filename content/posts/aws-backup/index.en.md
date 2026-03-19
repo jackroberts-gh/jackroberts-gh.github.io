@@ -109,7 +109,7 @@ Why is a CMK required? Whether it's to a DataBunker vault or an in-account Logic
 
 #### AMK-encrypted
 
-If the source resources is **AWK**-encrypted, that's... not ideal. You have three options:
+If the source resources is **AMK**-encrypted, that's... not ideal. You have three options:
 
 1. If possible, re-encrypt the resource with a CMK.
 2. Have your backup plan perform a copy to an intermediate vault that is encrypted with a CMK - this will cause your backup to be re-encrypted with a CMK, within the account. You can then have a separate process outside of your Backup Plan (e.g. event -> lambda) to perform the copy to the DataBunker/LAGV.
